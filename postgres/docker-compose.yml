@@ -1,0 +1,20 @@
+version: '3'
+services:
+
+  amino_PostgresData:
+    image: alpine
+    volumes:
+        - /var/lib/postgresql/data
+    
+
+  pg_amino_DEV:
+    image: "postgres"
+    ports:
+      - "5432:5432"
+    env_file:
+      - database.env
+    volumes_from:
+      - fda_PostgresData:rw
+    
+
+
