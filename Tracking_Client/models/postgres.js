@@ -106,6 +106,26 @@ class Postgres {
         }
     }
 
+    async getAllTokens() {
+        //console.log("looking for contracts with tracking number"):
+        let tokens = [];
+        try {
+            const clientResult = await this.clientDemo(`select * from tokens`);
+            console.log(clientResult.rows)
+            for(let i = 0; i <clientResult.rows.length; i++){
+                if(clientResult.rows[i].deliverystatus == '1'){
+                    tokens.push(clientResult.rows[i].tokennumber);
+                }
+            }
+            console.log(tokens)
+            return tokens
+        }
+        catch (ex) {
+            console.log(ex)
+            return tokens
+        }
+    }
+
 
 
 }

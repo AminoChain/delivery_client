@@ -42,7 +42,7 @@ app.route('/getpackageStatus/:trackingnumber')
       res.status(200)
       res.send(status)
       log.logInfo('getpackageStatus', `End getStatus`, cid)
-      
+
     } catch (ex) {
       log.logInfo(ex)
       res.sendStatus(ex)
@@ -71,18 +71,39 @@ app.route('/settokenStatus/:tokenID/:status')
 
     }
   })
-/*
-//TODO: once working with real shipper apis remove this
-app.route('/createTrackingNumber/:tokenID/:trackingNumber')
-  .get((req, res) => {
-    let cid = uuidv4();
-    let tID = req.params.tokenID
-    let tn = req.params.trackingNumber
-    log.logInfo('createTrackingNumber', `Start createTrackingNumber TN= ${tn} tokenID = ${tID}`, cid)
-    pg.updateTokenTrackingNumber(genomeContract, tID, tn);
-    log.logInfo('createTrackingNumber', `END createTrackingNumber`, cid)
+
+
+//Test Route runs on a cron and will update tokens to deliver package
+//In the future this will shck the delivery status from ship engine
+//then call the contract with the appropriate delivery status
+app.route('/updateToDelivered')
+  .get(async (req, res) => {
+    try {
+      let cid = uuidv4();
+      let tokens = await pg.getAllTokens()
+      console.log(tokens)
+      for (let i = 0; i < tokens.length; i++) {
+        log.logInfo('setpackageStatus', `Start setStatus tokenID = ${tokens[i]}, status = 2`, cid)
+        
+        
+        try{
+          await watcher.updateDeliveryStatus(tokens[i], 2)
+          await pg.upsertTokenTransferInfo(marketPlace, tokens[i], 2)
+        }
+        catch(ex){
+          console.log(`delivery update status failed for ${tokens[i]}`)
+        }
+      }
+      log.logInfo('setpackageStatus', `END setStatus`, cid)
+      res.status(200)
+      res.end()
+    }
+    catch (ex) {
+      log.logInfo(ex)
+      res.sendStatus(ex)
+
+    }
   })
-  */
 
 
 //TODO: once working with real shipper apis remove this
