@@ -1,0 +1,11 @@
+version: '3'
+services:
+
+
+  wiremock1:
+    image: "wiremock/wiremock:2.34.0"
+    ports:
+      - "8080:8080"  
+    volumes:
+      # [PATH_TO_REPO_CHAINLINK_VOLUME]:/chainlink/
+      - C:/Code/Docker Projects/WireMockTutorial/WireMock/:/home/wiremock/mappings/
