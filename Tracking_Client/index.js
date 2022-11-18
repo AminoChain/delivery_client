@@ -16,7 +16,7 @@ const procname = 'index'
 const correlationID = uuidv4()
 const env = process.env.ENV
 const genomeContract = process.env.GENOME_CONTRACT
-const marketPlace = process.env.MRKTPL_CONTRACT 
+const marketPlace = process.env.MRKTPL_CONTRACT
 
 app.use(express.json());
 app.use(cors());
@@ -27,7 +27,10 @@ log.logInfo(procname, "Starting Server", correlationID)
 log.logInfo(procname, "Starting Contract Listener", correlationID)
 const watcher = new ContractWatcher()
 
-//interfaces with mockAPI
+
+//Ship Engine tracking is defined in the client
+// for now we will set the delivery status manually until we can get live shipping
+//Ship Engine does not provide a dynamic test environment.
 app.route('/getpackageStatus/:trackingnumber')
   .get(async (req, res) => {
     try {
@@ -35,11 +38,12 @@ app.route('/getpackageStatus/:trackingnumber')
       let tn = req.params.trackingnumber
       log.logInfo('getpackageStatus', `Start getStatus ${tn}`, cid)
       let delivStatus = await pg.getDeliveryStatusByTN(tn);
-      let status = {deliveryStatus:delivStatus}
+      let status = { deliveryStatus: delivStatus }
       res.status(200)
       res.send(status)
       log.logInfo('getpackageStatus', `End getStatus`, cid)
-    }catch (ex) {
+      
+    } catch (ex) {
       log.logInfo(ex)
       res.sendStatus(ex)
     }
@@ -47,17 +51,27 @@ app.route('/getpackageStatus/:trackingnumber')
 
 /*Note: This is baked in for demo purposes and should be removed after the demo
 */
+
 app.route('/settokenStatus/:tokenID/:status')
   .get((req, res) => {
-    let cid = uuidv4();
-    let tokenID = req.params.tokenID
-    let status = req.params.status
-    log.logInfo('setpackageStatus', `Start setStatus tokenID = ${tokenID}, status = ${status}`, cid)
-    pg.upsertTokenTransferInfo(genomeContract, tokenID, status)
-    watcher.updateDeliveryStatus(tokenID, status)
-    log.logInfo('setpackageStatus', `END setStatus`, cid)
-  })
+    try {
+      let cid = uuidv4();
+      let tokenID = req.params.tokenID
+      let status = req.params.status
+      log.logInfo('setpackageStatus', `Start setStatus tokenID = ${tokenID}, status = ${status}`, cid)
+      pg.upsertTokenTransferInfo(genomeContract, tokenID, status)
+      watcher.updateDeliveryStatus(tokenID, status)
+      log.logInfo('setpackageStatus', `END setStatus`, cid)
+      res.status(200)
+      res.end()
+    }
+    catch (ex) {
+      log.logInfo(ex)
+      res.sendStatus(ex)
 
+    }
+  })
+/*
 //TODO: once working with real shipper apis remove this
 app.route('/createTrackingNumber/:tokenID/:trackingNumber')
   .get((req, res) => {
@@ -68,6 +82,7 @@ app.route('/createTrackingNumber/:tokenID/:trackingNumber')
     pg.updateTokenTrackingNumber(genomeContract, tID, tn);
     log.logInfo('createTrackingNumber', `END createTrackingNumber`, cid)
   })
+  */
 
 
 //TODO: once working with real shipper apis remove this
@@ -86,18 +101,18 @@ app.route('/shipPackage/:tokenID')
 
       //Delivery Status will always be 1 when a label is created.
       let wasUpdateSuccseesful = await watcher.updateDeliveryStatus(tID, 1)
-      
+
       if (wasUpdateSuccseesful) {
-        await pg.updateTokenTrackingNumber(marketPlace, tID, shippingInfo.tracking_number,"1");
+        await pg.updateTokenTrackingNumber(marketPlace, tID, shippingInfo.tracking_number, "1");
       }
-      else{
-        await pg.updateTokenTrackingNumber(marketPlace, tID, shippingInfo.tracking_number,"0");
+      else {
+        await pg.updateTokenTrackingNumber(marketPlace, tID, shippingInfo.tracking_number, "0");
       }
-      
+
       log.logInfo('createTrackingNumber', `END createTrackingNumber`, cid)
-      
+
       res.status(200)
-      let resp = { tracking_number: shippingInfo.tracking_number, pdfLabel: shippingInfo.label_download.pdf, wascontractupdateded:wasUpdateSuccseesful }
+      let resp = { tracking_number: shippingInfo.tracking_number, pdfLabel: shippingInfo.label_download.pdf, wascontractupdateded: wasUpdateSuccseesful }
       res.send(resp)
     }
     catch (ex) {

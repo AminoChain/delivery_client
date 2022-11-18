@@ -18,46 +18,6 @@ class ShipEngineClient {
     async GetTestLabel(requestString) {
        // let shipreq = new Shipment();
         let req = Object.assign(new ShipReqRoot(),requestString)
-        /*
-        let ship = new Shipment();
-        ship.service_code = "ups_ground"
-        let shipTo = new Address();
-        shipTo.name = 'Jane Doe'
-        shipTo.address_line1 = '525 S Winchester Blvd'
-        shipTo.city_locality = "San Jose"
-        shipTo.state_province = "CA"
-        shipTo.postal_code = "95128"
-        shipTo.country_code = "US"
-        shipTo.address_residential_indicator = "yes"
-
-
-        let shipFrom = new Address();
-        shipFrom.name = 'Tester'
-        shipFrom.phone = "555-555-5555"
-        shipFrom.company_name = "Example Corp"
-        shipFrom.address_line1 = '4009 Marathon Blvd'
-        shipFrom.city_locality = "Austin"
-        shipFrom.state_province = "TX"
-        shipFrom.postal_code = "78756"
-        shipFrom.country_code = "US"
-        shipFrom.address_residential_indicator = "no"
-
-        let dimensions = new Dimensions();
-        dimensions.height = 6
-        dimensions.width = 12
-        dimensions.length = 24
-        dimensions.unit = "inch"
-
-        let weight = new Weight()
-        weight.value = 20
-        weight.unit = "ounce"
-
-
-        ship.ship_to = shipTo
-        ship.ship_from = shipFrom
-        ship.packages = []
-        ship.packages.push(new Package(weight, dimensions))
-        */
 
         // await client.generateLabelData(JSON.stringify(ship));
         let info = await this.generateLabelData(JSON.stringify(req))
@@ -66,6 +26,52 @@ class ShipEngineClient {
         return resp
     }
 
+    //Will retrieve the delivery status from ship engine
+    async getShipData(carrier,trackingNumber) {
+       
+
+
+        return new Promise((resolve, reject) => {
+            console.log(process.env.SHIP_ENGINE_APIKEY);
+            const options = {
+                host: process.env.SHIP_ENGINE_URL,
+                path: `/v1/tracking?carrier_code=${carrier}&tracking_number=${trackingNumber}`,
+                method: "GET",
+                headers: {
+                    'API-Key': process.env.SHIP_ENGINE_APIKEY,
+                }
+            }
+            
+            let req = https.request(options, res => {
+                let chunks_of_data = [];
+
+                res.on('data', (fragments) => {
+                    chunks_of_data.push(fragments);
+                });
+
+                res.on('end', () => {
+                    let responseBody = Buffer.concat(chunks_of_data);
+
+                    var resp = new trackingResponse();
+                    resp = JSON.parse(responseBody.toString());
+                    //console.log(resp.trackResponse.shipment[0].package);
+                    console.log("test")
+                    console.log(resp)
+                    resolve(responseBody.toString());
+                });
+
+                res.on('error', error => {
+                    Logger.logError('Failed to call UPS' + error);
+                    reject(error);
+                });
+
+            });
+            req.end();
+        });
+
+    }
+
+    //Generates the shipping data from ship engine
     async generateLabelData(shipdata) {
         console.log(shipdata)
 
